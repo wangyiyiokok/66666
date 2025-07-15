@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微博评论数据分析仪表板</title>
+    <style>
+        :root {
+            --primary-color: #4a6bdf;
+            --secondary-color: #ff6b6b;
+            --dark-bg: #121212;
+            --card-bg: #1e1e1e;
+            --text-light: #ffffff;
+            --text-gray: #aaaaaa;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--dark-bg);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 2rem 0;
+            background: linear-gradient(135deg, var(--primary-color), #6c5ce7);
+            color: white;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin: 0.5rem 0 0;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            padding: 0 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto 3rem;
+        }
+        
+        .chart-card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+        
+        .chart-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .chart-img-container {
+            height: 250px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .chart-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        
+        .chart-card:hover .chart-img {
+            transform: scale(1.05);
+        }
+        
+        .chart-info {
+            padding: 1.2rem;
+        }
+        
+        .chart-title {
+            font-size: 1.3rem;
+            margin: 0 0 0.5rem;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+        }
+        
+        .chart-title i {
+            margin-right: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .chart-desc {
+            font-size: 0.9rem;
+            color: var(--text-gray);
+            margin: 0;
+            line-height: 1.5;
+        }
+        
+        .chart-tags {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 0.8rem;
+            gap: 0.5rem;
+        }
+        
+        .tag {
+            background-color: rgba(74, 107, 223, 0.2);
+            color: var(--primary-color);
+            padding: 0.3rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .modal.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+        
+        .modal-img {
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            background-color: #0a0a0a;
+            color: var(--text-gray);
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+                padding: 0 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+        
+        /* 动画效果 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        /* 图表特定图标 */
+        .wordcloud-icon { color: #ff6b6b; }
+        .map-icon { color: #4ecdc4; }
+        .pie-icon { color: #a5d6a7; }
+        .bar-icon { color: #64b5f6; }
+        .line-icon { color: #ba68c8; }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="header">
+        <h1>微博评论数据分析仪表板</h1>
+        <p>探索用户评论的情感、时间和地域分布</p>
+    </div>
+    
+    <div class="dashboard">
+        <!-- 负面评论词云 -->
+        <div class="chart-card" data-chart="负面评论词云">
+            <div class="chart-img-container">
+                <img src="负面评论词云.png" alt="负面评论词云" class="chart-img">
+            </div>
+            <div class="chart-info">
+                <h3 class="chart-title"><i class="fas fa-cloud wordcloud-icon"></i>负面评论词云</h3>
+                <p class="chart-desc">分析负面评论中的高频词汇分布，"哇哇"、"耳环"等词汇突出</p>
+                <div class="chart-tags">
+                    <span class="tag">情感分析</span>
+                    <span class="tag">高频词</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 评论地域分布 -->
+        <div class="chart-card" data-chart="评论地域分布">
+            <div class="chart-img-container">
+                <img src="评论地域分布.png" alt="评论地域分布" class="chart-img">
+            </div>
+            <div class="chart-info">
+                <h3 class="chart-title"><i class="fas fa-map-marked-alt map-icon"></i>评论地域分布</h3>
+                <p class="chart-desc">展示评论用户的地域分布情况，呈现明显的地域差异</p>
+                <div class="chart-tags">
+                    <span class="tag">地理分布</span>
+                    <span class="tag">用户分析</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 评论情感 -->
+        <div class="chart-card" data-chart="评论情感">
+            <div class="chart-img-container">
+                <img src="评论情感.png" alt="评论情感" class="chart-img">
+            </div>
+            <div class="chart-info">
+                <h3 class="chart-title"><i class="fas fa-chart-pie pie-icon"></i>评论情感分析</h3>
+                <p class="chart-desc">情感分布饼图显示正面评论占75%，负面15%，中性10%</p>
+                <div class="chart-tags">
+                    <span class="tag">情感分类</span>
+                    <span class="tag">比例分析</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 评论时间分布 -->
+        <div class="chart-card" data-chart="评论时间分布">
+            <div class="chart-img-container">
+                <img src="评论时间分布.png" alt="评论时间分布" class="chart-img">
+            </div>
+            <div class="chart-info">
+                <h3 class="chart-title"><i class="fas fa-chart-bar bar-icon"></i>评论时间分布</h3>
+                <p class="chart-desc">显示评论在不同时间段的分布情况，有明显的高峰时段</p>
+                <div class="chart-tags">
+                    <span class="tag">时间分析</span>
+                    <span class="tag">活跃时段</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 情绪波动按天 -->
+        <div class="chart-card" data-chart="情绪波动按天">
+            <div class="chart-img-container">
+                <img src="情绪波动按天.png" alt="情绪波动按天" class="chart-img">
+            </div>
+            <div class="chart-info">
+                <h3 class="chart-title"><i class="fas fa-chart-line line-icon"></i>情绪波动（按天）</h3>
+                <p class="chart-desc">展示每日情绪变化趋势，结合柱状图显示评论量</p>
+                <div class="chart-tags">
+                    <span class="tag">趋势分析</span>
+                    <span class="tag">日变化</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 情绪波动按小时 -->
+        <div class="chart-card" data-chart="情绪波动按小时">
+            <div class="chart-img-container">
+                <img src="情绪波动按小时.png" alt="情绪波动按小时" class="chart-img">
+            </div>
+            <div class="chart-info">
+                <h3 class="chart-title"><i class="fas fa-clock line-icon"></i>情绪波动（按小时）</h3>
+                <p class="chart-desc">每小时情绪变化折线图，反映用户情绪随时间的变化</p>
+                <div class="chart-tags">
+                    <span class="tag">时间序列</span>
+                    <span class="tag">小时分析</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 整体评论词云 -->
+        <div class="chart-card" data-chart="整体评论词云">
+            <div class="chart-img-container">
+                <img src="整体评论词云.png" alt="整体评论词云" class="chart-img">
+            </div>
+            <div class="chart-info">
+                <h3 class="chart-title"><i class="fas fa-cloud wordcloud-icon"></i>整体评论词云</h3>
+                <p class="chart-desc">所有评论的高频词汇可视化，"高考"、"加油"等词汇突出</p>
+                <div class="chart-tags">
+                    <span class="tag">文本分析</span>
+                    <span class="tag">关键词</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 正面评论词云 -->
+        <div class="chart-card" data-chart="正面评论词云">
+            <div class="chart-img-container">
+                <img src="正面评论词云.png" alt="正面评论词云" class="chart-img">
+            </div>
+            <div class="chart-info">
+                <h3 class="chart-title"><i class="fas fa-smile wordcloud-icon"></i>正面评论词云</h3>
+                <p class="chart-desc">正面评论中的高频词汇，"加油"、"宝宝"等词汇更醒目</p>
+                <div class="chart-tags">
+                    <span class="tag">积极情感</span>
+                    <span class="tag">鼓励词汇</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="chartModal">
+        <button class="close-modal">&times;</button>
+        <div class="modal-content">
+            <img id="modalImage" class="modal-img" src="" alt="放大图表">
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>微博评论数据分析仪表板 &copy; 2023 | 数据可视化分析工具</p>
+    </div>
+    
+    <script>
+        // 卡片点击放大效果
+        document.querySelectorAll('.chart-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const chartName = this.getAttribute('data-chart');
+                const imgSrc = this.querySelector('.chart-img').src;
+                const modal = document.getElementById('chartModal');
+                const modalImg = document.getElementById('modalImage');
+                
+                modalImg.src = imgSrc;
+                modalImg.alt = chartName;
+                modal.classList.add('active');
+                
+                document.body.style.overflow = 'hidden';
+            });
+        });
+        
+        // 关闭模态框
+        document.querySelector('.close-modal').addEventListener('click', function() {
+            document.getElementById('chartModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        });
+        
+        // 点击模态框外部关闭
+        document.getElementById('chartModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+        });
+        
+        // 随机浮动动画
+        document.querySelectorAll('.chart-card').forEach((card, index) => {
+            // 为每个卡片设置不同的动画延迟
+            card.style.animationDelay = `${index * 0.1}s`;
+            
+            // 随机添加浮动效果
+            if (Math.random() > 0.5) {
+                card.classList.add('floating');
+            }
+        });
+    </script>
+</body>
+</html>
